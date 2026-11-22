@@ -71,6 +71,13 @@ function getTransactionsCollection() {
   return transactionsCollection;
 }
 
+function getUsersCollection() {
+  if (!db) {
+    throw new Error("Database not initialized. Call connectDB() first.");
+  }
+  return db.collection("user");
+}
+
 function getClient() {
   return client;
 }
@@ -82,4 +89,5 @@ module.exports = {
   getServicesCollection,
   getBookingsCollection,
   getTransactionsCollection,
+  getUsersCollection,
 };
