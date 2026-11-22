@@ -50,12 +50,14 @@ const authRoutes = require("./routes/auth");
 const servicesRoutes = require("./routes/services");
 const vendorRoutes = require("./routes/vendor");
 const bookingsRoutes = require("./routes/bookings");
+const customerRoutes = require("./routes/customer");
 const errorHandler = require("./middlewares/errorHandler");
 
 app.use("/api/users", authRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/bookings", bookingsRoutes);
+app.use("/api/customer", customerRoutes);
 
 // 404 handler
 app.use((_req, res) => {
