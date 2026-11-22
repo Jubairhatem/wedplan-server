@@ -163,7 +163,9 @@ async function getAdminUserById(req, res, next) {
 async function toggleBlockStatus(req, res, next) {
   try {
     const { id } = req.params;
-    const { action } = req.query; // "block" or "unblock"
+    // Action is derived from the matched route path (/block or /unblock),
+    // not from query params, so the two routes share one handler safely.
+    const action = req.path.endsWith("/block") ? "block" : "unblock";
 
     const users = getUsersCollection();
 
