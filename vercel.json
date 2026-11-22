@@ -1,21 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm install",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": null,
-  "regions": ["iad1"],
-  "env": {
-    "PORT": "@port",
-    "MONGODB_URI": "@mongodb_uri",
-    "DB_NAME": "@db_name",
-    "JWT_SECRET": "@jwt_secret",
-    "CLIENT_URL": "@client_url",
-    "STRIPE_SECRET_KEY": "@stripe_secret_key",
-    "STRIPE_WEBHOOK_SECRET": "@stripe_webhook_secret",
-    "STRIPE_PREMIUM_PRICE_ID": "@stripe_premium_price_id",
-    "IMGBB_API_KEY": "@imgbb_api_key",
-    "ADMIN_EMAIL": "@admin_email",
-    "ADMIN_PASSWORD": "@admin_password"
-  }
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index.js" }
+  ]
 }
