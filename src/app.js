@@ -45,20 +45,18 @@ app.get("/", (_req, res) => {
   });
 });
 
-// ----- Routes will be mounted here in later phases -----
+// Auth / Users routes
+const authRoutes = require("./routes/auth");
+const errorHandler = require("./middlewares/errorHandler");
+
+app.use("/api/users", authRoutes);
 
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-// Global error handler (placeholder — full version in Phase 2)
-app.use((err, _req, res, _next) => {
-  console.error("Unhandled error:", err);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
+// Global centralized error handler
+app.use(errorHandler);
 
 module.exports = app;
