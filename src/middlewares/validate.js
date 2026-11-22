@@ -14,7 +14,8 @@ function validate(schema, source = "body") {
     } catch (error) {
       if (error instanceof ZodError) {
         const formattedErrors = {};
-        error.errors.forEach((err) => {
+        const issues = error.issues || error.errors || [];
+        issues.forEach((err) => {
           const field = err.path.join(".");
           if (!formattedErrors[field]) {
             formattedErrors[field] = [];
