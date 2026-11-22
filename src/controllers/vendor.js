@@ -259,9 +259,9 @@ async function getVendorOverview(req, res, next) {
         pendingBookings,
         acceptedBookings,
         subscription: {
-          plan: req.userDoc.subscriptionPlan || "free",
+          plan: isPremium ? "premium" : "free",
           isPremium,
-          expiresAt: req.userDoc.subscriptionExpiresAt || null,
+          expiresAt: isPremium ? req.userDoc.subscriptionExpiresAt || null : null,
         },
       },
     });

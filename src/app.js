@@ -31,7 +31,6 @@ app.use(
   "/api/webhooks/stripe",
   express.raw({ type: "application/json" })
 );
-
 // JSON body parser for all other routes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
@@ -51,6 +50,7 @@ const servicesRoutes = require("./routes/services");
 const vendorRoutes = require("./routes/vendor");
 const bookingsRoutes = require("./routes/bookings");
 const customerRoutes = require("./routes/customer");
+const paymentsRoutes = require("./routes/payments");
 const errorHandler = require("./middlewares/errorHandler");
 
 app.use("/api/users", authRoutes);
@@ -58,6 +58,7 @@ app.use("/api/services", servicesRoutes);
 app.use("/api/vendor", vendorRoutes);
 app.use("/api/bookings", bookingsRoutes);
 app.use("/api/customer", customerRoutes);
+app.use("/api/payments", paymentsRoutes);
 
 // 404 handler
 app.use((_req, res) => {

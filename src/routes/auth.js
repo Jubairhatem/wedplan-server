@@ -4,13 +4,18 @@ const checkBlocked = require("../middlewares/checkBlocked");
 const validate = require("../middlewares/validate");
 const { updateProfileSchema } = require("../validators/users");
 const { getUsersCollection } = require("../config/db");
+const { isVendorPremium } = require("../controllers/vendor");
 
 const router = express.Router();
 
 /**
- * Removes internal/sensitive fields before sending a user to the client
+ * Removes internal/sensitive fields before sending a user to the client.
+ * An expired premium plan is reported as `free` (the stored plan is left
+ * untouched so payment history stays auditable).
  */
 function sanitizeUser(user) {
+  const isPremium = isVendorPremium(user);
+
   return {
     id: user.id || user._id,
     name: user.name || "",
@@ -19,8 +24,8 @@ function sanitizeUser(user) {
     role: user.role || "customer",
     isBlocked: user.isBlocked || false,
     businessName: user.businessName || null,
-    subscriptionPlan: user.subscriptionPlan || "free",
-    subscriptionExpiresAt: user.subscriptionExpiresAt || null,
+    subscriptionPlan: isPremium ? "premium" : "free",
+    subscriptionExpiresAt: isPremium ? user.subscriptionExpiresAt || null : null,
     createdAt: user.createdAt,
   };
 }
