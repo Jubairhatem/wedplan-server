@@ -1,5 +1,22 @@
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
+const crypto = require("node:crypto");
 const env = require("../config/env");
+
+function hashPassword(password) {
+  return new Promise((resolve, reject) => {
+    const salt = crypto.randomBytes(16).toString("hex");
+    crypto.scrypt(
+      password.normalize("NFKC"),
+      salt,
+      64,
+      { N: 16384, r: 16, p: 1, maxmem: 128 * 16384 * 16 * 2 },
+      (err, derivedKey) => {
+        if (err) return reject(err);
+        resolve(salt + ":" + derivedKey.toString("hex"));
+      }
+    );
+  });
+}
 
 async function seedAdmin() {
   if (!env.ADMIN_EMAIL) {
@@ -13,28 +30,29 @@ async function seedAdmin() {
     await client.connect();
     const db = client.db(env.DB_NAME);
     const userCollection = db.collection("user");
+    const accountCollection = db.collection("account");
 
-    const existingAdmin = await userCollection.findOne({
-      email: env.ADMIN_EMAIL.toLowerCase().trim(),
-    });
+    const email = env.ADMIN_EMAIL.toLowerCase().trim();
+    let adminUser = await userCollection.findOne({ email });
 
-    if (existingAdmin) {
+    const now = new Date();
+
+    if (adminUser) {
       await userCollection.updateOne(
-        { _id: existingAdmin._id },
+        { _id: adminUser._id },
         {
           $set: {
             role: "admin",
             isBlocked: false,
-            updatedAt: new Date(),
+            updatedAt: now,
           },
         }
       );
-      console.log(`✅ Existing user [${env.ADMIN_EMAIL}] promoted to admin role.`);
+      console.log(`✅ Existing user [${email}] confirmed with admin role.`);
     } else {
-      const now = new Date();
       const newAdmin = {
         name: "Admin User",
-        email: env.ADMIN_EMAIL.toLowerCase().trim(),
+        email,
         emailVerified: true,
         role: "admin",
         isBlocked: false,
@@ -44,10 +62,36 @@ async function seedAdmin() {
       };
 
       const result = await userCollection.insertOne(newAdmin);
+      adminUser = { ...newAdmin, _id: result.insertedId };
       console.log(
-        `✅ Admin user created with ID: ${result.insertedId} and email: ${env.ADMIN_EMAIL}`
+        `✅ Admin user created with ID: ${result.insertedId} and email: ${email}`
       );
     }
+
+    // Ensure password account exists for Better Auth
+    const adminPassword = process.env.ADMIN_PASSWORD || "Admin123!@#";
+    const hashedPassword = await hashPassword(adminPassword);
+
+    await accountCollection.deleteMany({
+      $or: [
+        { userId: adminUser._id },
+        { userId: adminUser._id.toString() },
+        { accountId: adminUser._id.toString() },
+      ],
+    });
+
+    await accountCollection.insertOne({
+      userId: adminUser._id,
+      accountId: adminUser._id.toString(),
+      providerId: "credential",
+      password: hashedPassword,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    console.log(
+      `✅ Admin credentials configured for [${email}] with password [${adminPassword}].`
+    );
   } catch (error) {
     console.error("❌ Admin seed failed:", error);
     process.exit(1);
