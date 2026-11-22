@@ -48,10 +48,12 @@ app.get("/", (_req, res) => {
 // Auth / Users routes
 const authRoutes = require("./routes/auth");
 const servicesRoutes = require("./routes/services");
+const vendorRoutes = require("./routes/vendor");
 const errorHandler = require("./middlewares/errorHandler");
 
 app.use("/api/users", authRoutes);
 app.use("/api/services", servicesRoutes);
+app.use("/api/vendor", vendorRoutes);
 
 // 404 handler
 app.use((_req, res) => {
