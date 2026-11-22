@@ -31,6 +31,8 @@ app.use(
   "/api/webhooks/stripe",
   express.raw({ type: "application/json" })
 );
+app.use("/api/webhooks/stripe", require("./routes/webhooks"));
+
 // JSON body parser for all other routes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
