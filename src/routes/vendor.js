@@ -9,6 +9,11 @@ const {
   deleteService,
   getVendorOverview,
 } = require("../controllers/vendor");
+const {
+  getVendorBookings,
+  acceptBooking,
+  rejectBooking,
+} = require("../controllers/vendorBookings");
 
 const router = express.Router();
 
@@ -20,5 +25,10 @@ router.post("/services", createService);
 router.get("/services", getMyServices);
 router.patch("/services/:id", updateService);
 router.delete("/services/:id", deleteService);
+
+// Booking requests
+router.get("/bookings", getVendorBookings);
+router.patch("/bookings/:id/accept", acceptBooking);
+router.patch("/bookings/:id/reject", rejectBooking);
 
 module.exports = router;
