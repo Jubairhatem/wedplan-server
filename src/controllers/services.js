@@ -2,6 +2,60 @@ const { ObjectId } = require("mongodb");
 const { getServicesCollection, getUsersCollection } = require("../config/db");
 
 /**
+ * Shapes a vendor document into the public-safe summary used by service cards
+ */
+function summarizeVendor(vendor) {
+  if (!vendor) return null;
+  return {
+    id: vendor.id || vendor._id,
+    name: vendor.name,
+    businessName: vendor.businessName || vendor.name,
+    image: vendor.image || null,
+    isPremium: vendor.subscriptionPlan === "premium",
+  };
+}
+
+/**
+ * Attaches a lightweight vendor summary to each service using a single batched query
+ * (avoids N+1 lookups when rendering public listings)
+ */
+async function attachVendors(services) {
+  if (!services.length) return services;
+
+  const vendorIds = [
+    ...new Set(services.map((s) => s.vendorId).filter(Boolean)),
+  ];
+  if (!vendorIds.length) {
+    return services.map((s) => ({ ...s, vendor: null }));
+  }
+
+  const users = getUsersCollection();
+  const objectIds = vendorIds
+    .filter((id) => ObjectId.isValid(id))
+    .map((id) => new ObjectId(id));
+  const stringIds = vendorIds.filter((id) => !ObjectId.isValid(id));
+
+  const lookups = [];
+  if (objectIds.length) lookups.push({ _id: { $in: objectIds } });
+  if (stringIds.length) lookups.push({ id: { $in: stringIds } });
+
+  const vendors = lookups.length
+    ? await users.find({ $or: lookups }).toArray()
+    : [];
+
+  const vendorMap = new Map();
+  for (const vendor of vendors) {
+    vendorMap.set(String(vendor.id || vendor._id), vendor);
+    vendorMap.set(String(vendor._id), vendor);
+  }
+
+  return services.map((service) => ({
+    ...service,
+    vendor: summarizeVendor(vendorMap.get(String(service.vendorId))),
+  }));
+}
+
+/**
  * GET /api/services
  * Public browse endpoint with search, category, location filter, price sorting and pagination
  */
@@ -55,12 +109,14 @@ async function getServices(req, res, next) {
     }
 
     const total = await services.countDocuments(query);
-    const items = await services
+    const rawItems = await services
       .find(query)
       .sort(sortOptions)
       .skip(skip)
       .limit(limitNum)
       .toArray();
+
+    const items = await attachVendors(rawItems);
 
     res.json({
       success: true,
@@ -93,7 +149,7 @@ async function getFeaturedServices(req, res, next) {
 
     res.json({
       success: true,
-      data: items,
+      data: await attachVendors(items),
     });
   } catch (error) {
     next(error);
@@ -159,7 +215,12 @@ async function getServiceById(req, res, next) {
     }
 
     const services = getServicesCollection();
-    const service = await services.findOne({ _id: new ObjectId(id) });
+    // Public detail endpoint only exposes approved + active services
+    const service = await services.findOne({
+      _id: new ObjectId(id),
+      status: "approved",
+      isActive: true,
+    });
 
     if (!service) {
       return res.status(404).json({
@@ -168,37 +229,11 @@ async function getServiceById(req, res, next) {
       });
     }
 
-    // Attach vendor information if available
-    const users = getUsersCollection();
-    let vendor = null;
-
-    if (service.vendorId) {
-      if (ObjectId.isValid(service.vendorId)) {
-        vendor = await users.findOne({ _id: new ObjectId(service.vendorId) });
-      } else {
-        vendor = await users.findOne({
-          $or: [{ id: service.vendorId }, { email: service.vendorId }],
-        });
-      }
-    }
-
-    const responseData = {
-      ...service,
-      vendor: vendor
-        ? {
-            id: vendor.id || vendor._id,
-            name: vendor.name,
-            businessName: vendor.businessName || vendor.name,
-            image: vendor.image,
-            email: vendor.email,
-            isPremium: vendor.subscriptionPlan === "premium",
-          }
-        : null,
-    };
+    const [enriched] = await attachVendors([service]);
 
     res.json({
       success: true,
-      data: responseData,
+      data: enriched,
     });
   } catch (error) {
     next(error);
