@@ -7,6 +7,7 @@ const {
   getMyServices,
   updateService,
   deleteService,
+  getVendorOverview,
 } = require("../controllers/vendor");
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 // All vendor routes require JWT + vendor role + active unblocked status
 router.use(verifyJWT, requireRole("vendor"), checkBlocked);
 
+router.get("/overview", getVendorOverview);
 router.post("/services", createService);
 router.get("/services", getMyServices);
 router.patch("/services/:id", updateService);

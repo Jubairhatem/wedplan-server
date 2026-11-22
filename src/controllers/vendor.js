@@ -225,10 +225,56 @@ async function deleteService(req, res, next) {
   }
 }
 
+/**
+ * GET /api/vendor/overview
+ * Overview statistics for vendor dashboard
+ */
+async function getVendorOverview(req, res, next) {
+  try {
+    const services = getServicesCollection();
+    const bookings = getBookingsCollection();
+    const vendorId = req.user.userId;
+
+    const [totalServices, activeServices, pendingServices] = await Promise.all([
+      services.countDocuments({ vendorId }),
+      services.countDocuments({ vendorId, isActive: true }),
+      services.countDocuments({ vendorId, status: "pending" }),
+    ]);
+
+    const [totalBookings, pendingBookings, acceptedBookings] = await Promise.all([
+      bookings.countDocuments({ vendorId }),
+      bookings.countDocuments({ vendorId, status: "pending" }),
+      bookings.countDocuments({ vendorId, status: "accepted" }),
+    ]);
+
+    const isPremium = isVendorPremium(req.userDoc);
+
+    res.json({
+      success: true,
+      data: {
+        totalServices,
+        activeServices,
+        pendingServices,
+        totalBookings,
+        pendingBookings,
+        acceptedBookings,
+        subscription: {
+          plan: req.userDoc.subscriptionPlan || "free",
+          isPremium,
+          expiresAt: req.userDoc.subscriptionExpiresAt || null,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   createService,
   getMyServices,
   updateService,
   deleteService,
+  getVendorOverview,
   isVendorPremium,
 };
